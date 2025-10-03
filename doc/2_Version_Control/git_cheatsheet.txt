@@ -1,0 +1,34 @@
+git commit      # Records staged changes to the repository
+                 # Arguments: -m "message" (commit with message), -a (stage and commit all changes)
+                 # No args: Opens editor for commit message
+
+git branch      # **FUNCTION CHANGES WITH ARGS**: Lists/creates/deletes branches
+                 # No args: Lists all local branches
+                 # <branch-name>: Creates new branch
+                 # -d <branch-name>: Deletes branch
+
+git checkout    # **FUNCTION CHANGES WITH ARGS**: Switches branches or restores files
+                 # <branch-name>: Switch to existing branch
+                 # -b <branch-name>: Create and switch to new branch
+                 # <file-name>: Restore file to last committed state
+
+git pull        # Fetches and merges changes from remote repository to current branch
+                 # Arguments: <remote> <branch> (specify remote and branch)
+                 # No args: Pull from default remote/branch (usually origin/current-branch)
+
+git push        # Uploads local commits to remote repository
+                 # Arguments: <remote> <branch> (specify remote and branch)
+                 # -u <remote> <branch>: Set upstream tracking branch
+                 # No args: Push to upstream branch if set
+
+git merge       # Combines changes from specified branch into current branch
+                 # Arguments: <branch-name> (required - branch to merge into current)
+                 # --no-ff: Force creation of merge commit
+
+git rebase      # Replays commits from current branch onto another branch
+                 # Arguments: <branch-name> (branch to rebase onto)
+                 # -i: Interactive rebase (allows editing commits)
+
+git fetch       # Downloads objects and refs from remote repository without merging
+                 # Arguments: <remote> (specific remote to fetch from)
+                 # No args: Fetch from all configured remotes
