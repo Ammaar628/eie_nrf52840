@@ -1,0 +1,103 @@
+General tips and differences to remember:
+git commit
+	- What it does: Create a new commit recording the current staged changes (a snapshot in the repository history).
+	- Common arguments you might use:
+		- -m "message" : Provide commit message on the command line (avoids opening an editor).
+		- -a : Automatically stage changes to tracked files (modified/deleted) before committing.
+		- --amend : Replace (amend) the most recent commit with the current staging area (useful to fix message or add forgotten changes).
+		- -v : Show diff in the commit message editor.
+		- --author="Name <email>" : Set a specific author for the commit.
+		- -S : Sign the commit with GPG.
+	- Notes about arguments / behavior changes:
+		- With no -m or message flags, Git opens your editor to compose the commit message.
+		- Using --amend changes history (rewrites the previous commit).
+
+git branch
+	- What it does: List, create, delete or rename branches (local refs).
+	- Common arguments:
+		- (no args) : List local branches (currently checked-out branch is highlighted with *).
+		- -r : List remote-tracking branches.
+		- -a : List both local and remote branches.
+		- <branch-name> : Create a new branch with that name (does NOT switch to it).
+		- -d <branch> : Delete a branch (safe delete — refuses if unmerged).
+		- -D <branch> : Force-delete a branch (unsafe — deletes even if unmerged).
+		- -m <old> <new> or -m <new> : Rename a branch.
+		- -v : Show the last commit on each branch.
+	- Notes about arguments / behavior changes:
+		- The command does very different things depending on arguments: no args lists branches, a name creates a branch, -d/-D deletes, -m renames.
+
+git checkout
+	- What it does: (legacy) switch branches or restore files from a tree; it can change HEAD, update working tree files, or both.
+	- Common arguments:
+		- <branch-name> : Switch to an existing branch (updates HEAD and working tree).
+		- -b <new-branch> : Create a new branch and switch to it (shorthand for branch + checkout).
+		- <commit-ish> -- <path> : Restore specific files from a commit to working tree (useful for getting an old version of a file).
+		- -- <pathspec> : Safely separate branch/commit names from file paths.
+	- Notes about arguments / behavior changes:
+		- If you pass a branch name, it switches branches; if you pass file paths, it restores files instead.
+		- Because it does multiple things, modern Git introduced `git switch` (for branch switching) and `git restore` (for file restoration) to make intent clearer.
+
+git pull
+	- What it does: Fetch from a remote and then integrate the fetched changes into the current branch (by default, fetch + merge).
+	- Common arguments:
+		- [remote] [branch] : Example: `git pull origin main` fetches origin/main and merges it into your current branch.
+		- --rebase : After fetch, rebase your local commits on top of the fetched branch instead of merging.
+		- --ff-only : Only update if the merge can be fast-forwarded; fail otherwise (avoids merge commits).
+	- Notes about arguments / behavior changes:
+		- With no args it pulls from the configured upstream for the current branch (the tracked remote branch).
+		- --rebase changes the integration strategy from merge to rebase — this alters history and how conflicts are presented.
+
+git push
+	- What it does: Upload local ref updates (branches/tags) to a remote repository (update remote refs/heads and/or remotes/tags).
+	- Common arguments:
+		- [remote] [branch] : Example `git push origin main` pushes local main to origin/main.
+		- -u or --set-upstream : Set the specified remote branch as the default upstream for the current local branch (useful on first push).
+		- --force or -f : Force push (overwrite remote history) — dangerous if others share the branch.
+		- --force-with-lease : Safer force: only overwrite if remote hasn't advanced since last fetch.
+		- --tags : Push all tags.
+		- --all : Push all branches.
+		- :<branch> (empty source) : Delete a branch on the remote (e.g., `git push origin :feature/x`).
+	- Notes about arguments / behavior changes:
+		- With no args, push behavior is controlled by `push.default` configuration (commonly pushes current branch to its upstream).
+		- Specifying remote and branch makes the target explicit.
+
+git merge
+	- What it does: Merge the specified commits/branches into the current branch (combine histories and produce a merge commit unless fast-forwarded).
+	- Common arguments:
+		- <branch> : Merge the given branch into the current branch.
+		- --no-ff : Always create a merge commit even when a fast-forward is possible (keeps explicit merge history).
+		- --ff-only : Only perform the merge if it can be fast-forwarded; otherwise fail.
+		- --squash : Squash the changes from the given branch into the working tree without creating a merge commit; you must commit afterwards.
+		- --abort : During a conflicted merge, stop and try to return to the pre-merge state.
+	- Notes about arguments / behavior changes:
+		- Merging multiple branches at once is possible (git merge A B), which will merge both into HEAD — the number of arguments changes what is merged.
+
+git rebase
+	- What it does: Reapply commits on top of another base commit. Commonly used to keep a linear history by moving local commits on top of updated upstream history.
+	- Common arguments:
+		- <upstream> : Example `git rebase main` reapplies your current branch commits on top of main.
+		- -i or --interactive : Interactive rebase to reorder, squash, edit commits (e.g., `git rebase -i HEAD~5`).
+		- --onto <newbase> <upstream> <branch> : More advanced rewriting to transplant a range of commits onto a new base.
+		- --continue / --abort / --skip : Continue/abort/skip during a rebase that stopped for conflicts.
+	- Notes about arguments / behavior changes:
+		- Interactive vs non-interactive rebases change the experience: interactive lets you edit history (squash, reorder, edit messages).
+		- Rebase rewrites commits (creates new commit objects) so it's unsafe to rebase shared/public commits others rely on.
+
+git fetch
+	- What it does: Download objects and references from a remote repository into your local repository (update remote-tracking branches) without merging or modifying working tree.
+	- Common arguments:
+		- [remote] : Example `git fetch origin` downloads data from origin.
+		- [remote] [refspec] : Fetch a particular refspec (branch, tag, or pattern).
+		- --all : Fetch from all remotes.
+		- --prune : Remove remote-tracking branches that no longer exist on the remote (clean up stale refs).
+		- --depth <n> : Do a shallow fetch of limited history (useful for large repos or CI speedups).
+	- Notes about arguments / behavior changes:
+		- With no args, `git fetch` will fetch from the default remote for the repository (or do nothing if none configured).
+		- Fetch never changes your current branches or working tree by default — it's a safe way to see remote updates before integrating.
+
+General tips and differences to remember:
+	- Many commands behave differently when given zero arguments vs one or more arguments (example: `git branch` lists vs creates; `git checkout` switches vs restores).
+	- Where possible, prefer `git switch` (for switching/creating branches) and `git restore` (for restoring files) to make intent clearer than `git checkout`.
+	- `git pull` is shorthand for `git fetch` + `git merge` (or `git fetch` + `git rebase` with --rebase). That two-step nature is why `git fetch` is often used separately so you can inspect changes before integrating.
+	- Use `--force-with-lease` instead of `--force` when you need to push rewritten history; it's safer for collaboration.
+
