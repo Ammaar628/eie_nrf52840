@@ -52,12 +52,19 @@ int main(void){
         return ret;
     }
 
+    int counter = 0;
+    
     while (1){
         gpio_pin_toggle_dt(&led0);
-        gpio_pin_toggle_dt(&led1);
-        gpio_pin_toggle_dt(&led2);
-        gpio_pin_toggle_dt(&led3);
-        k_msleep(1000);
+        
+        if (counter % 2 == 0) {
+            gpio_pin_toggle_dt(&led1);
+            gpio_pin_toggle_dt(&led2);
+            gpio_pin_toggle_dt(&led3);
+        }
+        
+        counter++;
+        k_msleep(500);
     }
     
     return 0;
