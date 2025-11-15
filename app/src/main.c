@@ -9,8 +9,21 @@
 
 #define SLEEP_MS 1
 
+// Password configuration - set the correct password combination
+#define PASSWORD_BTN0 true
+#define PASSWORD_BTN1 false
+#define PASSWORD_BTN2 true
+
+typedef enum {
+  STATE_LOCKED,
+  STATE_WAITING
+} system_state;
+
 int main(void) {
-  uint8_t counter = 0;
+  system_state state = STATE_LOCKED;
+  bool btn0_pressed = false;
+  bool btn1_pressed = false;
+  bool btn2_pressed = false;
 
   if (0 > BTN_init()) {
     return 0;
@@ -19,35 +32,69 @@ int main(void) {
     return 0;
   }
 
-  // Initialize all LEDs to OFF
-  LED_set(LED0, LED_OFF);
-  LED_set(LED1, LED_OFF);
-  LED_set(LED2, LED_OFF);
-  LED_set(LED3, LED_OFF);
+  // Start in locked state with LED0 on
+  LED_set(LED0, LED_ON);
+  printk("System locked. Enter password using BTN0, BTN1, BTN2, then press BTN3.\n");
+  printk("Password hint: BTN0=%s, BTN1=%s, BTN2=%s\n", 
+         PASSWORD_BTN0 ? "PRESS" : "DON'T PRESS",
+         PASSWORD_BTN1 ? "PRESS" : "DON'T PRESS",
+         PASSWORD_BTN2 ? "PRESS" : "DON'T PRESS");
 
   while(1) {
-    if (BTN_check_clear_pressed(BTN0)){
-      counter++;
-      
-      // Reset counter when it reaches 16
-      if (counter >= 16) {
-        counter = 0;
+    if (state == STATE_LOCKED) {
+      // Track button presses
+      if (BTN_check_clear_pressed(BTN0)) {
+        btn0_pressed = true;
+        printk("BTN0 pressed\n");
+      }
+      if (BTN_check_clear_pressed(BTN1)) {
+        btn1_pressed = true;
+        printk("BTN1 pressed\n");
+      }
+      if (BTN_check_clear_pressed(BTN2)) {
+        btn2_pressed = true;
+        printk("BTN2 pressed\n");
       }
       
-      // Display counter in binary on LEDs
-      // LED0 = bit 0 (LSB), LED1 = bit 1, LED2 = bit 2, LED3 = bit 3 (MSB)
-      LED_set(LED0, (counter & 0x01) ? LED_ON : LED_OFF);
-      LED_set(LED1, (counter & 0x02) ? LED_ON : LED_OFF);
-      LED_set(LED2, (counter & 0x04) ? LED_ON : LED_OFF);
-      LED_set(LED3, (counter & 0x08) ? LED_ON : LED_OFF);
-      
-      printk("Counter: %d (Binary: %d%d%d%d)\n", 
-             counter,
-             (counter & 0x08) ? 1 : 0,
-             (counter & 0x04) ? 1 : 0,
-             (counter & 0x02) ? 1 : 0,
-             (counter & 0x01) ? 1 : 0);
+      // Check if BTN3 (enter) is pressed
+      if (BTN_check_clear_pressed(BTN3)) {
+        // Verify password
+        if (btn0_pressed == PASSWORD_BTN0 && 
+            btn1_pressed == PASSWORD_BTN1 && 
+            btn2_pressed == PASSWORD_BTN2) {
+          printk("Correct!\n");
+        } else {
+          printk("Incorrect!\n");
+        }
+        
+        // Turn off LED0 and enter waiting state
+        LED_set(LED0, LED_OFF);
+        state = STATE_WAITING;
+        printk("Press any button to reset...\n");
+        
+        // Reset button press tracking
+        btn0_pressed = false;
+        btn1_pressed = false;
+        btn2_pressed = false;
+      }
+    } 
+    else if (state == STATE_WAITING) {
+      // Any button press resets to locked state
+      if (BTN_check_clear_pressed(BTN0) || 
+          BTN_check_clear_pressed(BTN1) || 
+          BTN_check_clear_pressed(BTN2) || 
+          BTN_check_clear_pressed(BTN3)) {
+        
+        state = STATE_LOCKED;
+        LED_set(LED0, LED_ON);
+        btn0_pressed = false;
+        btn1_pressed = false;
+        btn2_pressed = false;
+        printk("\nSystem reset. System locked.\n");
+        printk("Enter password using BTN0, BTN1, BTN2, then press BTN3.\n");
+      }
     }
+    
     k_msleep(SLEEP_MS);
   }
 	return 0;
