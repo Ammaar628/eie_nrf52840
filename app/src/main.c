@@ -19,6 +19,8 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 
+#include "LED.h"
+
 /* MACROS --------------------------------------------------------------------------------------- */
 
 #define BLE_CUSTOM_SERVICE_UUID \
@@ -108,6 +110,15 @@ static ssize_t ble_custom_service_write(struct bt_conn* conn, const struct bt_ga
   }
   printk("\n");
 
+  // Check for LED control commands
+  if (strncmp((const char*)value, "LED ON", 6) == 0) {
+    LED_set(LED0, LED_ON);
+    printk("[BLE] LED0 turned ON\n");
+  } else if (strncmp((const char*)value, "LED OFF", 7) == 0) {
+    LED_set(LED0, LED_OFF);
+    printk("[BLE] LED0 turned OFF\n");
+  }
+
   return len;
 }
 
@@ -120,6 +131,13 @@ static void ble_custom_service_notify() {
 /* MAIN ----------------------------------------------------------------------------------------- */
 
 int main(void) {
+  // Initialize LED driver
+  if (LED_init() < 0) {
+    printk("LED init failed\n");
+    return 0;
+  }
+  printk("LED initialized!\n");
+
   int err = bt_enable(NULL);
   if (err) {
     printk("Bluetooth init failed (err %d)\n", err);
