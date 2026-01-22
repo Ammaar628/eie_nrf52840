@@ -27,6 +27,8 @@
   BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef0)
 #define BLE_CUSTOM_CHARACTERISTIC_UUID \
   BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2)
+#define BLE_CUSTOM_CHARACTERISTIC2_UUID \
+  BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef3)
 
 #define BLE_CUSTOM_CHARACTERISTIC_MAX_DATA_LENGTH 20
 
@@ -37,12 +39,19 @@ static ssize_t ble_custom_service_read(struct bt_conn* conn, const struct bt_gat
 static ssize_t ble_custom_service_write(struct bt_conn* conn, const struct bt_gatt_attr* attr,
                                         const void* buf, uint16_t len, uint16_t offset,
                                         uint8_t flags);
+static ssize_t ble_custom_service_char2_read(struct bt_conn* conn, const struct bt_gatt_attr* attr,
+                                              void* buf, uint16_t len, uint16_t offset);
+static ssize_t ble_custom_service_char2_write(struct bt_conn* conn, const struct bt_gatt_attr* attr,
+                                               const void* buf, uint16_t len, uint16_t offset,
+                                               uint8_t flags);
 
 /* VARIABLES ------------------------------------------------------------------------------------ */
 
 static const struct bt_uuid_128 ble_custom_service_uuid = BT_UUID_INIT_128(BLE_CUSTOM_SERVICE_UUID);
 static const struct bt_uuid_128 ble_custom_characteristic_uuid =
     BT_UUID_INIT_128(BLE_CUSTOM_CHARACTERISTIC_UUID);
+static const struct bt_uuid_128 ble_custom_characteristic2_uuid =
+    BT_UUID_INIT_128(BLE_CUSTOM_CHARACTERISTIC2_UUID);
 
 static const struct bt_data ble_advertising_data[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -55,6 +64,8 @@ static const struct bt_data ble_scan_response_data[] = {
 
 static uint8_t ble_custom_characteristic_user_data[BLE_CUSTOM_CHARACTERISTIC_MAX_DATA_LENGTH + 1] =
     {'E', 'i', 'E'};
+static uint8_t ble_custom_characteristic2_user_data[BLE_CUSTOM_CHARACTERISTIC_MAX_DATA_LENGTH + 1] =
+    {'C', 'h', 'a', 'r', '2'};
 
 static bool counter_direction_up = true;  // true = counting up, false = counting down
 static bool led1_state = false;  // Track LED1 state: false = OFF, true = ON
@@ -65,7 +76,7 @@ BT_GATT_SERVICE_DEFINE(
     ble_custom_service,  // Name of the struct that will store the config for this service
     BT_GATT_PRIMARY_SERVICE(&ble_custom_service_uuid),  // Setting the service UUID
 
-    // Now to define the characteristic:
+    // First characteristic (LED1 control):
     BT_GATT_CHARACTERISTIC(
         &ble_custom_characteristic_uuid.uuid,  // Setting the characteristic UUID
         BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,  // Possible operations
@@ -75,6 +86,20 @@ BT_GATT_SERVICE_DEFINE(
         ble_custom_characteristic_user_data  // Initial data stored in this characteristic
         ),
     BT_GATT_CCC(  // Client characteristic configuration for the above custom characteristic
+        NULL,     // Callback for when this characteristic is changed
+        BT_GATT_PERM_READ | BT_GATT_PERM_WRITE  // Permissions that connecting devices have
+        ),
+
+    // Second characteristic (independent data storage):
+    BT_GATT_CHARACTERISTIC(
+        &ble_custom_characteristic2_uuid.uuid,  // Setting the characteristic UUID
+        BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,  // Possible operations
+        BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,  // Permissions that connecting devices have
+        ble_custom_service_char2_read,        // Callback for when this characteristic is read from
+        ble_custom_service_char2_write,       // Callback for when this characteristic is written to
+        ble_custom_characteristic2_user_data  // Initial data stored in this characteristic
+        ),
+    BT_GATT_CCC(  // Client characteristic configuration for the second characteristic
         NULL,     // Callback for when this characteristic is changed
         BT_GATT_PERM_READ | BT_GATT_PERM_WRITE  // Permissions that connecting devices have
         ),
@@ -123,6 +148,38 @@ static ssize_t ble_custom_service_write(struct bt_conn* conn, const struct bt_ga
     led1_state = false;
     printk("[BLE] LED1 turned OFF\n");
   }
+
+  return len;
+}
+
+static ssize_t ble_custom_service_char2_read(struct bt_conn* conn, const struct bt_gatt_attr* attr,
+                                              void* buf, uint16_t len, uint16_t offset) {
+  const char* value = attr->user_data;
+  
+  printk("[BLE] Char2 Read request - Current value: %s\n", value);
+
+  return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
+}
+
+static ssize_t ble_custom_service_char2_write(struct bt_conn* conn, const struct bt_gatt_attr* attr,
+                                               const void* buf, uint16_t len, uint16_t offset,
+                                               uint8_t flags) {
+  uint8_t* value = attr->user_data;
+
+  if (offset + len > BLE_CUSTOM_CHARACTERISTIC_MAX_DATA_LENGTH) {
+    printk("[BLE] ble_custom_service_char2_write: Bad offset %d\n", offset + len);
+    return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+  }
+
+  memcpy(value + offset, buf, len);
+  value[offset + len] = 0;
+
+  printk("[BLE] ble_custom_service_char2_write (%d, %d):", offset, len);
+  for (uint16_t i = 0; i < len; i++) {
+    printk("%s %02X '%c'", i == 0 ? "" : ",", value[offset + i], value[offset + i]);
+  }
+  printk("\n");
+  printk("[BLE] Char2 new value: %s\n", value);
 
   return len;
 }
