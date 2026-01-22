@@ -136,6 +136,9 @@ static ssize_t ble_custom_service_char2_write(struct bt_conn* conn, const struct
 
 static void ble_custom_service_notify() {
   static uint32_t counter = 0;
+  
+  // Send notification with counter value
+  // attrs[2] is the first characteristic (read-only GETTER)
   bt_gatt_notify(NULL, &ble_custom_service.attrs[2], &counter, sizeof(counter));
   
   if (counter_direction_up) {
@@ -143,6 +146,8 @@ static void ble_custom_service_notify() {
   } else {
     counter--;
   }
+  
+  printk("[BLE] Notification sent: counter = %u\n", counter - (counter_direction_up ? 1 : -1));
 }
 
 /* MAIN ----------------------------------------------------------------------------------------- */
